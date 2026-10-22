@@ -49,7 +49,7 @@
 <footer class="foot">
   <div class="wrap">
     <span>© 2026 Bestcomp · ИП Кружнов С.В.</span>
-    <span>Бишкек, ул. Сыдыкова 178 · Пн–Сб 10:00–20:00 · +996 707 198 806</span>
+    <span>Бишкек, ул. Сыдыкова 178 · Пн–Сб 8:00–18:00, обед 13:00–14:00 · +996 707 198 806</span>
     <span id="siteStats" class="stats" hidden></span>
   </div>
 </footer>
@@ -85,7 +85,7 @@
       <ul class="trust">${trust.map(t=>`<li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t[1]}</svg>${esc(t[0])}</li>`).join('')}</ul>
       ${x.desc?`<p class="pcd-desc">${esc(x.desc)}</p>`:''}
       ${parts.length?`<div class="pcd-parts"><h2>Комплектующие</h2><ul>${parts.map(p=>`<li>${esc(p.n)}${p.q>1?` <span class="qty-b">×${p.q}</span>`:''}</li>`).join('')}</ul></div>`:''}
-      <p style="margin:0;color:var(--muted);font-size:15px">Забрать можно в магазине: Бишкек, ул. Сыдыкова 178, Пн–Сб 10:00–20:00.</p>
+      <p style="margin:0;color:var(--muted);font-size:15px">Забрать можно в магазине: Бишкек, ул. Сыдыкова 178, Пн–Сб 8:00–18:00 (обед 13:00–14:00).</p>
     </div></div>
     ${sim.length?`<section class="sim"><h2 class="spec-h">Похожие сборки</h2><div class="pcs-grid">${sim.map(card).join('')}</div></section>`:''}`;
   // закреплённая кнопка покупки на телефоне — появляется, когда основная кнопка ушла за экран
