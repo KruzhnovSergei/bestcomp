@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Готовый компьютер — Bestcomp, Бишкек</title>
+<meta name="description" content="Готовый компьютер в наличии в Bestcomp, Бишкек: фото, состав и цена.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css?v=2610220010">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="index.html">
+      <i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#14161A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></i>
+      <b>BESTCOMP</b>
+    </a>
+    <nav class="nav" aria-label="Основное меню">
+      <a href="catalog.html">Каталог</a>
+      <a href="builds.html">Готовые ПК</a>
+      <a href="index.html#build">Сборка ПК</a>
+      <a href="index.html#buyback">Скупка</a>
+      <a href="index.html#contacts">Контакты</a>
+    </nav>
+    <a class="btn btn-accent" href="tel:+996707198806">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+      <span class="lbl">+996 707 198 806</span>
+    </a>
+  </div>
+</header>
+<script>
+// Отступ под закреплённую шапку: при переходе по #разделу заголовок не прячется под ней
+(function(){const h=document.querySelector('.top');if(!h)return;
+  const set=()=>document.documentElement.style.setProperty('--hh',(h.offsetHeight+16)+'px');set();addEventListener('resize',set);
+  // когда блоки догрузились (готовые сборки), докрутить до раздела из адреса ещё раз
+  window.bcFixHash=()=>{const id=decodeURIComponent(location.hash.slice(1));if(!id||id.includes('='))return;const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'auto'})};
+  addEventListener('load',()=>setTimeout(bcFixHash,50));})();
+</script>
+
+
+<main class="wrap" style="padding-top:28px;padding-bottom:96px">
+  <a class="back" href="builds.html">← Все готовые компьютеры</a>
+  <div id="pc"><p style="color:var(--muted)">Загружаю…</p></div>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <span>© 2026 Bestcomp · ИП Кружнов С.В.</span>
+    <span>Бишкек, ул. Сыдыкова 178 · Пн–Сб 10:00–20:00 · +996 707 198 806</span>
+    <span id="siteStats" class="stats" hidden></span>
+  </div>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="pcspec.js?v=2610220010"></script>
+<script src="pcs.js?v=2610220010"></script>
+<script>
+(async()=>{const box=document.getElementById('pc');const sn=new URLSearchParams(location.search).get('sn')||'';
+  const {esc,money,buy,kind,ph,card}=BCPC;const {specs,group,icon}=BCSPEC;let L=[];try{L=await BCPC.load()}catch(e){}
+  const x=L.find(r=>r.sn===sn);
+  if(!x){box.innerHTML='<h1 style="font-family:var(--f-display);font-size:28px">Этот компьютер уже продан</h1><p style="color:var(--muted);font-size:17px">Посмотрите другие готовые сборки или напишите нам — соберём похожий.</p><div class="row" style="margin-top:16px"><a class="btn btn-dark btn-lg" href="builds.html">Готовые компьютеры</a><a class="btn btn-accent btn-lg" href="https://wa.me/996707198806">Написать в WhatsApp</a></div>';return}
+  document.title=x.n+' — Bestcomp, Бишкек';
+  let imgs=[];try{const d=await BCPC.photos(sn);imgs=(d&&d.imgs)||[]}catch(e){}
+  if(!imgs.length&&x.th)imgs=[x.th];
+  const shot=src=>`<div class="bg" style="background-image:url('${src}')" aria-hidden="true"></div><img src="${src}" alt="${esc(x.n)}">`;
+  const norm=t=>String(t||'').toLowerCase().replace(/\s+/g,'');if(x.desc&&norm(x.desc)===norm(x.cfg))x.desc='';
+  const S=specs(x);const parts=group(x.parts);
+  const trust=[['Собран и протестирован у нас','<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>']];
+  const sim=L.filter(r=>r.sn!==x.sn&&kind(r)===kind(x)).sort((a,b)=>Math.abs(a.p-x.p)-Math.abs(b.p-x.p)).slice(0,4);
+  box.innerHTML=`<div class="pcd">
+    <div class="pcd-gal"><button class="pcd-main" id="main" aria-label="Открыть фото на весь экран">${imgs[0]?shot(imgs[0]):ph}${imgs.length?'<span class="zoom" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>':''}</button>
+      ${imgs.length>1?`<div class="pcd-thumbs">${imgs.map((s,i)=>`<button data-i="${i}" aria-pressed="${i===0}" aria-label="Фото ${i+1}"><img src="${s}" alt=""></button>`).join('')}</div>`:''}
+      ${S.length?`<section class="spec-sec"><h2 class="spec-h">Главное</h2><div class="specs">${S.map(s=>`<div class="spec"><span class="spec-i">${icon(s.k)}</span><span class="spec-t">${esc(s.t)}</span><b class="spec-v">${esc(s.v)}</b></div>`).join('')}</div></section>`:''}</div>
+    <div class="pcd-info">
+      <div class="row" style="gap:8px;align-items:center"><span class="pc-kind" style="position:static">${kind(x)}</span><span style="color:#6B717A;font-size:14px">S/N ${esc(x.sn)}</span><span class="instock" style="margin:0">В наличии</span></div>
+      <h1>${esc(x.n)}</h1>
+      ${x.cfg?`<p class="pc-cfg" style="font-size:18px">${esc(x.cfg)}</p>`:''}
+      <div class="pcd-price">${money(x.p)}</div>
+      <div class="row" id="buyRow"><a class="btn btn-accent btn-lg" target="_blank" rel="noopener" href="${buy(x)}">Купить в WhatsApp</a><a class="btn btn-line btn-lg" href="tel:+996707198806">Позвонить</a></div>
+      <ul class="trust">${trust.map(t=>`<li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t[1]}</svg>${esc(t[0])}</li>`).join('')}</ul>
+      ${x.desc?`<p class="pcd-desc">${esc(x.desc)}</p>`:''}
+      ${parts.length?`<div class="pcd-parts"><h2>Комплектующие</h2><ul>${parts.map(p=>`<li>${esc(p.n)}${p.q>1?` <span class="qty-b">×${p.q}</span>`:''}</li>`).join('')}</ul></div>`:''}
+      <p style="margin:0;color:var(--muted);font-size:15px">Забрать можно в магазине: Бишкек, ул. Сыдыкова 178, Пн–Сб 10:00–20:00.</p>
+    </div></div>
+    ${sim.length?`<section class="sim"><h2 class="spec-h">Похожие сборки</h2><div class="pcs-grid">${sim.map(card).join('')}</div></section>`:''}`;
+  // закреплённая кнопка покупки на телефоне — появляется, когда основная кнопка ушла за экран
+  const bar=document.createElement('div');bar.className='buybar';bar.hidden=true;
+  bar.innerHTML=`<div><b>${money(x.p)}</b><span>${esc(x.n)}</span></div><a class="btn btn-accent" target="_blank" rel="noopener" href="${buy(x)}">Купить в WhatsApp</a>`;document.body.appendChild(bar);
+  try{new IntersectionObserver(([e])=>{bar.hidden=e.isIntersecting||innerWidth>860}).observe(document.getElementById('buyRow'))}catch(e){}
+  // галерея: смена фото, просмотр на весь экран, листание пальцем
+  let cur=0;const show=i=>{cur=(i+imgs.length)%imgs.length;document.getElementById('main').innerHTML=shot(imgs[cur])+'<span class="zoom" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>';box.querySelectorAll('.pcd-thumbs button').forEach((t,j)=>t.setAttribute('aria-pressed',j===cur))};
+  const lb=document.createElement('div');lb.className='lb';lb.hidden=true;lb.setAttribute('role','dialog');lb.setAttribute('aria-modal','true');lb.setAttribute('aria-label','Фото компьютера');
+  lb.innerHTML=`<img alt="${esc(x.n)}"><button class="lb-x" aria-label="Закрыть">×</button>${imgs.length>1?'<button class="lb-p" aria-label="Предыдущее фото">‹</button><button class="lb-n" aria-label="Следующее фото">›</button>':''}<span class="lb-c"></span>`;document.body.appendChild(lb);
+  const lbShow=()=>{lb.querySelector('img').src=imgs[cur];lb.querySelector('.lb-c').textContent=imgs.length>1?(cur+1)+' / '+imgs.length:''};
+  const open=()=>{if(!imgs.length)return;lbShow();lb.hidden=false;document.body.style.overflow='hidden';lb.querySelector('.lb-x').focus()};
+  const close=()=>{lb.hidden=true;document.body.style.overflow='';document.getElementById('main').focus()};
+  box.addEventListener('click',e=>{const b=e.target.closest('.pcd-thumbs button');if(b){show(+b.dataset.i);return}if(e.target.closest('#main'))open()});
+  lb.addEventListener('click',e=>{if(e.target.closest('.lb-p')){show(cur-1);lbShow()}else if(e.target.closest('.lb-n')){show(cur+1);lbShow()}else if(e.target.closest('.lb-x')||e.target===lb)close()});
+  document.addEventListener('keydown',e=>{if(lb.hidden)return;if(e.key==='Escape')close();if(e.key==='ArrowRight'&&imgs.length>1){show(cur+1);lbShow()}if(e.key==='ArrowLeft'&&imgs.length>1){show(cur-1);lbShow()}});
+  const swipe=(el,after)=>{let sx=null;el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});el.addEventListener('touchend',e=>{if(sx==null||imgs.length<2)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>40){show(cur+(dx<0?1:-1));after&&after()}},{passive:true})};
+  swipe(document.getElementById('main').parentElement);swipe(lb,lbShow);
+})();
+</script>
+<script src="stats.js?v=2610220010"></script>
+</body>
+</html>

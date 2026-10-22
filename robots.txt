@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://bestcomp.kg/sitemap.xml
