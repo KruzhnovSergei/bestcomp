@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.css?v=2610232158">
+<link rel="stylesheet" href="site.css?v=2610232302">
 </head>
 <body>
 <header class="top">
@@ -25,8 +25,8 @@
     <nav class="nav" aria-label="Основное меню">
       <a href="catalog.html">Каталог</a>
       <a href="builds.html">Готовые ПК</a>
-      <a href="index.html#build">Сборка ПК</a>
-      <a href="index.html#buyback">Скупка</a>
+      <a href="sborka-pk.html">Сборка ПК</a>
+      <a href="skupka.html">Скупка</a>
       <a href="index.html#contacts">Контакты</a>
     </nav>
     <a class="btn btn-accent" href="tel:+996707198806">
@@ -60,12 +60,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
-<script src="pcspec.js?v=2610232158"></script>
-<script src="pcs.js?v=2610232158"></script>
+<script src="pcspec.js?v=2610232302"></script>
+<script src="pcs.js?v=2610232302"></script>
 <script>
-(async()=>{const box=document.getElementById('pc');const sn=new URLSearchParams(location.search).get('sn')||'';
-  const {esc,money,buy,kind,ph,card}=BCPC;const {specs,group,icon}=BCSPEC;let L=[];try{L=await BCPC.load()}catch(e){}
+(async()=>{const box=document.getElementById('pc');const sn=new URLSearchParams(location.search).get('sn')||window.BC_SN||'';
+  const {esc,money,buy,kind,ph,card}=BCPC;const {specs,group,icon}=BCSPEC;let L=[],ok=false;try{L=await BCPC.load();ok=true}catch(e){}
   const x=L.find(r=>r.sn===sn);
+  if(!x&&!ok&&window.BC_SN)return; // база недоступна — оставляем готовое описание со страницы
   if(!x){box.innerHTML='<h1 style="font-family:var(--f-display);font-size:28px">Этот компьютер уже продан</h1><p style="color:var(--muted);font-size:17px">Посмотрите другие готовые сборки или напишите нам — соберём похожий.</p><div class="row" style="margin-top:16px"><a class="btn btn-dark btn-lg" href="builds.html">Готовые компьютеры</a><a class="btn btn-accent btn-lg" href="https://wa.me/996707198806">Написать в WhatsApp</a></div>';return}
   document.title=x.n+' — Bestcomp, Бишкек';
   let imgs=[];try{const d=await BCPC.photos(sn);imgs=(d&&d.imgs)||[]}catch(e){}
@@ -109,7 +110,7 @@
   swipe(document.getElementById('main').parentElement);swipe(lb,lbShow);
 })();
 </script>
-<script src="stats.js?v=2610232158"></script>
-<script src="notice.js?v=2610232209"></script>
+<script src="stats.js?v=2610232302"></script>
+<script src="notice.js?v=2610232302"></script>
 </body>
 </html>

@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Готовые компьютеры — Bestcomp, Бишкек</title>
-<meta name="description" content="Готовые собранные компьютеры в наличии в Bestcomp, Бишкек: игровые и офисные ПК с ценами.">
+<title>Готовые компьютеры в Бишкеке — игровые и офисные ПК в наличии | Bestcomp</title>
+<meta name="description" content="Готовые собранные компьютеры в наличии в Бишкеке: игровые, офисные и рабочие ПК с фото, составом и ценами. Забрать сегодня на ул. Сыдыкова 178.">
 <link rel="icon" href="favicon-48.png?v=3" sizes="48x48" type="image/png">
 <link rel="icon" href="favicon-32.png?v=3" sizes="32x32" type="image/png">
 <meta property="og:image" content="https://bestcomp.kg/logo-600.jpg?v=3">
 <meta property="og:site_name" content="Bestcomp">
+<link rel="canonical" href="https://bestcomp.kg/builds.html">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.css?v=2610232158">
+<link rel="stylesheet" href="site.css?v=2610232302">
 </head>
 <body>
 <header class="top">
@@ -25,8 +26,8 @@
     <nav class="nav" aria-label="Основное меню">
       <a href="catalog.html">Каталог</a>
       <a href="builds.html" aria-current="page">Готовые ПК</a>
-      <a href="index.html#build">Сборка ПК</a>
-      <a href="index.html#buyback">Скупка</a>
+      <a href="sborka-pk.html">Сборка ПК</a>
+      <a href="skupka.html">Скупка</a>
       <a href="index.html#contacts">Контакты</a>
     </nav>
     <a class="btn btn-accent" href="tel:+996707198806">
@@ -47,7 +48,7 @@
 
 <section class="cat-head" style="background:var(--dark);color:var(--paper);padding:40px 0 32px">
   <div class="wrap">
-    <h1 style="font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,44px);line-height:1.1">Готовые компьютеры</h1>
+    <h1 style="font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,44px);line-height:1.1">Готовые компьютеры в наличии</h1>
     <p id="sub" style="margin:10px 0 0;color:var(--dmuted)">Загружаю…</p>
   </div>
 </section>
@@ -72,9 +73,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
-<script src="pcs.js?v=2610232158"></script>
+<script src="pcs.js?v=2610232302"></script>
 <script>
-(async()=>{let L=[];try{L=await BCPC.load()}catch(e){}
+(async()=>{let L=[],ok=false;try{L=await BCPC.load();ok=true}catch(e){}
+  if(!ok&&document.querySelector('#grid .pc-card'))return; // база недоступна — оставляем готовый список со страницы
   const sub=document.getElementById('sub'),grid=document.getElementById('grid');
   if(!L.length){sub.textContent='Сейчас готовых сборок нет — соберём под ваш бюджет.';grid.innerHTML='<div class="empty" style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted)">Напишите нам в <a href="https://wa.me/996707198806">WhatsApp</a>, подберём конфигурацию.</div>';return}
   sub.textContent='В наличии: '+L.length+'. Нажмите на компьютер, чтобы посмотреть фото и полный состав.';
@@ -85,7 +87,7 @@
   document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b){k=b.dataset.k;draw()}});
   document.getElementById('sort').onchange=e=>{sort=e.target.value;draw()};draw()})();
 </script>
-<script src="stats.js?v=2610232158"></script>
-<script src="notice.js?v=2610232209"></script>
+<script src="stats.js?v=2610232302"></script>
+<script src="notice.js?v=2610232302"></script>
 </body>
 </html>

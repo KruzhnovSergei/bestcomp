@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Каталог — Bestcomp, Бишкек</title>
+<title>Каталог комплектующих и техники с ценами — Bestcomp, Бишкек</title>
 <meta name="description" content="Каталог комплектующих, ноутбуков, мониторов и оргтехники с ценами. Bestcomp, Бишкек, ул. Сыдыкова 178.">
 <link rel="icon" href="favicon-48.png?v=3" sizes="48x48" type="image/png">
 <link rel="icon" href="favicon-32.png?v=3" sizes="32x32" type="image/png">
 <meta property="og:image" content="https://bestcomp.kg/logo-600.jpg?v=3">
 <meta property="og:site_name" content="Bestcomp">
+<link rel="canonical" href="https://bestcomp.kg/catalog.html">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.css?v=2610232158">
+<link rel="stylesheet" href="site.css?v=2610232302">
 <style>
 .cat-head{background:var(--dark);color:var(--paper);padding:40px 0 32px}
 .cat-head h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,44px);line-height:1.1}
@@ -90,8 +91,8 @@
     <nav class="nav" aria-label="Основное меню">
       <a href="catalog.html" aria-current="page">Каталог</a>
       <a href="builds.html">Готовые ПК</a>
-      <a href="index.html#build">Сборка ПК</a>
-      <a href="index.html#buyback">Скупка</a>
+      <a href="sborka-pk.html">Сборка ПК</a>
+      <a href="skupka.html">Скупка</a>
       <a href="index.html#contacts">Контакты</a>
     </nav>
     <a class="btn btn-accent" href="tel:+996707198806">
@@ -218,12 +219,13 @@
     'Корпуса':[l=>has(l,/декоративн|led strip|led stripe|коробк|подсветк|экран для ко/)&&!has(l,/(^|[^a-z])(e-?atx|m-?atx|matx|atx|itx)([^a-z]|$)|w\/o psu|без б\/п/)?'Аксессуары для корпусов':'',l=>has(l,/e-?atx/)?'E-ATX (большие)':'',l=>has(l,/(^|[^a-z-])(?<!micro )(?<!micro)atx([^a-z]|$)/)?'ATX':'',l=>has(l,/m-?atx|matx|micro ?atx/)?'Micro-ATX':'',l=>has(l,/itx/)?'Mini-ITX':''],
     'Сетевое оборудование':[l=>has(l,/домофон|intercom|touch memory|ds-?1990|ibutton/)?'Домофоны':'',l=>has(l,/роутер|router|маршрутизатор/)?'Роутеры':'',l=>has(l,/коммутатор|switch/)?'Коммутаторы':'',l=>has(l,/точка доступа|access point/)?'Точки доступа':'',l=>has(l,/адаптер|adapter/)?'Сетевые адаптеры':'',l=>has(l,/кабель|патч|patch|utp|cable/)?'Кабели':'']
   };
+  const SUB_ORD={'Блоки питания':['200–500 Вт','550–700 Вт','750–850 Вт','1000 Вт и выше','Для ноутбуков','Адаптеры питания','Для видеонаблюдения'],'Охлаждение':['Кулеры для процессора','Водяное охлаждение','Вентиляторы для корпуса','Термопаста и термопрокладки','Контроллеры и разветвители','Радиаторы для памяти','Крепления и рамки','Охлаждение видеокарт','Подставки для ноутбуков'],'Корпуса':['ATX','Micro-ATX','Mini-ITX','E-ATX (большие)','Аксессуары для корпусов'],'Мониторы':['до 22"','23–24"','27"','32" и больше','Кронштейны и подставки'],'Оперативная память':['DDR5','DDR4','DDR3','Для ноутбука']};
   const subOf=(c,l)=>{const R=SUB[CATS[c]];if(!R)return '';for(const f of R){const v=f(l);if(v)return v}return 'Другие'};
   function renderSubs(){
     const box=$('subs');if(cat<0||!SUB[CATS[cat]]){box.hidden=true;box.innerHTML='';return}
     const words=q.toLowerCase().split(/\s+/).filter(Boolean);const M=new Map();
     for(const x of ITEMS)if(x.c===cat&&words.every(w=>x.l.includes(w)))M.set(x.s,(M.get(x.s)||0)+1);
-    const ORD={'Блоки питания':['200–500 Вт','550–700 Вт','750–850 Вт','1000 Вт и выше','Для ноутбуков','Адаптеры питания','Для видеонаблюдения'],'Охлаждение':['Кулеры для процессора','Водяное охлаждение','Вентиляторы для корпуса','Термопаста и термопрокладки','Контроллеры и разветвители','Радиаторы для памяти','Крепления и рамки','Охлаждение видеокарт','Подставки для ноутбуков'],'Корпуса':['ATX','Micro-ATX','Mini-ITX','E-ATX (большие)','Аксессуары для корпусов'],'Мониторы':['до 22"','23–24"','27"','32" и больше','Кронштейны и подставки'],'Оперативная память':['DDR5','DDR4','DDR3','Для ноутбука']}[CATS[cat]];
+    const ORD=SUB_ORD[CATS[cat]];
     const rk=n=>ORD&&ORD.includes(n)?ORD.indexOf(n):99;
     const L=[...M.entries()].sort((a,b)=>(a[0]==='Другие')-(b[0]==='Другие')||rk(a[0])-rk(b[0])||a[0].localeCompare(b[0],'ru',{numeric:true}));
     if(L.length<2&&!sub){box.hidden=true;box.innerHTML='';return}
@@ -309,6 +311,7 @@
       for(const x of Object.values(cart)){const f=byName.get(x.n);if(f)nc[f.id]={id:f.id,n:f.n,p:f.p,q:x.q}}cart=nc;saveCart();
       CNT=CATS.map((_,i)=>ITEMS.filter(x=>x.c===i).length);
       $('stockTg').hidden=!ITEMS.some(x=>x.st);
+      const uq=new URLSearchParams(location.search).get('q');if(uq){q=uq.trim();$('q').value=q}
       const hc=hashCat();cat=hc?CATS.indexOf(hc):-1;sub=cat>=0?hashSub():'';
       $('upd').textContent=`${NF.format(ITEMS.length)} товаров · цены обновлены ${new Date(meta.at).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}`;
       renderCats();rerender();
@@ -320,7 +323,7 @@
   renderCart();load();
 })();
 </script>
-<script src="stats.js?v=2610232158"></script>
-<script src="notice.js?v=2610232209"></script>
+<script src="stats.js?v=2610232302"></script>
+<script src="notice.js?v=2610232302"></script>
 </body>
 </html>
