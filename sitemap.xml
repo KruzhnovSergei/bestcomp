@@ -3,4 +3,6 @@
   <url><loc>https://bestcomp.kg/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://bestcomp.kg/catalog.html</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://bestcomp.kg/builds.html</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://bestcomp.kg/sborka-pk.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://bestcomp.kg/skupka.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>
