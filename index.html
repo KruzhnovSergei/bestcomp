@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.css?v=2610220010">
+<link rel="stylesheet" href="site.css?v=2610232158">
 </head>
 <body>
 
@@ -191,10 +191,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
-<script src="pcs.js?v=2610220010"></script>
+<script src="pcs.js?v=2610232158"></script>
 <script>
 // Число товаров в каталоге на первом экране и готовые сборки
-try{firebase.initializeApp(window.SK_CONFIG.firebase);const db=firebase.firestore();const NF=new Intl.NumberFormat('ru-RU');
+try{if(!firebase.apps.length)firebase.initializeApp(window.SK_CONFIG.firebase);const db=firebase.firestore();const NF=new Intl.NumberFormat('ru-RU');
   db.doc('sitecat/meta').get().then(d=>{const n=d.exists&&d.data().n;
     if(n>0){const el=document.getElementById('heroN');el.textContent=NF.format(n)}}).catch(()=>{});
   BCPC.load().then(L=>{if(!L.length)return;const MAX=8;
@@ -203,6 +203,7 @@ try{firebase.initializeApp(window.SK_CONFIG.firebase);const db=firebase.firestor
     document.getElementById('pcs').hidden=false;if(window.bcFixHash)requestAnimationFrame(bcFixHash)}).catch(()=>{});
 }catch(e){}
 </script>
-<script src="stats.js?v=2610220010"></script>
+<script src="stats.js?v=2610232158"></script>
+<script src="notice.js?v=2610232158"></script>
 </body>
 </html>

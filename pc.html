@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.css?v=2610220010">
+<link rel="stylesheet" href="site.css?v=2610232158">
 </head>
 <body>
 <header class="top">
@@ -60,8 +60,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
-<script src="pcspec.js?v=2610220010"></script>
-<script src="pcs.js?v=2610220010"></script>
+<script src="pcspec.js?v=2610232158"></script>
+<script src="pcs.js?v=2610232158"></script>
 <script>
 (async()=>{const box=document.getElementById('pc');const sn=new URLSearchParams(location.search).get('sn')||'';
   const {esc,money,buy,kind,ph,card}=BCPC;const {specs,group,icon}=BCSPEC;let L=[];try{L=await BCPC.load()}catch(e){}
@@ -109,6 +109,7 @@
   swipe(document.getElementById('main').parentElement);swipe(lb,lbShow);
 })();
 </script>
-<script src="stats.js?v=2610220010"></script>
+<script src="stats.js?v=2610232158"></script>
+<script src="notice.js?v=2610232158"></script>
 </body>
 </html>

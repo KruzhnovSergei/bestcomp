@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.css?v=2610220010">
+<link rel="stylesheet" href="site.css?v=2610232158">
 <style>
 .cat-head{background:var(--dark);color:var(--paper);padding:40px 0 32px}
 .cat-head h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,44px);line-height:1.1}
@@ -296,7 +296,7 @@
   // загрузка каталога из базы
   async function load(){
     try{
-      firebase.initializeApp(window.SK_CONFIG.firebase);
+      if(!firebase.apps.length)firebase.initializeApp(window.SK_CONFIG.firebase);
       const db=firebase.firestore();
       const m=await db.doc('sitecat/meta').get();
       if(!m.exists){$('upd').textContent='Каталог скоро появится. Пока звоните или пишите — подскажем цены.';ITEMS=[];renderCats();rerender();return}
@@ -320,6 +320,7 @@
   renderCart();load();
 })();
 </script>
-<script src="stats.js?v=2610220010"></script>
+<script src="stats.js?v=2610232158"></script>
+<script src="notice.js?v=2610232158"></script>
 </body>
 </html>

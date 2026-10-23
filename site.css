@@ -152,3 +152,10 @@ button.pcd-main{width:100%;padding:0;cursor:zoom-in;font:inherit}
 .lb button:hover{background:rgba(255,255,255,.22)}
 .lb-x{top:14px;right:14px}.lb-p{left:14px;top:50%;transform:translateY(-50%)}.lb-n{right:14px;top:50%;transform:translateY(-50%)}
 .lb-c{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:#ccc;font-size:14px}
+/* объявление над шапкой: «завтра не работаем» и т.п. */
+.notice-bar{background:var(--accent);color:var(--ink);font-weight:700;font-size:15px;line-height:1.4}
+.notice-bar .wrap{display:flex;align-items:center;gap:10px;padding-top:10px;padding-bottom:10px}
+.notice-bar svg{flex:none}
+.notice-bar span{flex:1;min-width:0}
+.notice-bar button{flex:none;background:none;border:0;color:inherit;font-size:24px;line-height:1;width:36px;height:36px;cursor:pointer;border-radius:8px}
+.notice-bar button:hover{background:rgba(0,0,0,.08)}
