@@ -68,7 +68,7 @@
   const x=L.find(r=>r.sn===sn);
   if(!x&&!ok&&window.BC_SN)return; // база недоступна — оставляем готовое описание со страницы
   if(!x){box.innerHTML='<h1 style="font-family:var(--f-display);font-size:28px">Этот компьютер уже продан</h1><p style="color:var(--muted);font-size:17px">Посмотрите другие готовые сборки или напишите нам — соберём похожий.</p><div class="row" style="margin-top:16px"><a class="btn btn-dark btn-lg" href="builds.html">Готовые компьютеры</a><a class="btn btn-accent btn-lg" href="https://wa.me/996707198806">Написать в WhatsApp</a></div>';return}
-  document.title=x.n+' — Bestcomp, Бишкек';
+  if(!window.BC_SN)document.title=x.n+' — Bestcomp, Бишкек';
   let imgs=[];try{const d=await BCPC.photos(sn);imgs=(d&&d.imgs)||[]}catch(e){}
   if(!imgs.length&&x.th)imgs=[x.th];
   const shot=src=>`<div class="bg" style="background-image:url('${src}')" aria-hidden="true"></div><img src="${src}" alt="${esc(x.n)}">`;
