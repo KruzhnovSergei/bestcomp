@@ -285,6 +285,9 @@
   $('sort').onchange=e=>{sort=e.target.value;shown=PAGE;renderList()};
   $('fab').onclick=()=>{$('drawer').hidden=false;$('close').focus()};
   $('close').onclick=()=>{$('drawer').hidden=true};
+  // «Назад» на телефоне закрывает корзину, а не уводит с сайта
+  {let hb=false;const dr=$('drawer');new MutationObserver(()=>{if(!dr.hidden&&!hb){hb=true;try{history.pushState({bcOv:1},'')}catch(e){}}else if(dr.hidden&&hb){hb=false;try{history.back()}catch(e){}}}).observe(dr,{attributes:true,attributeFilter:['hidden']});
+   addEventListener('popstate',()=>{if(hb){hb=false;dr.hidden=true}})}
   $('drawer').addEventListener('click',e=>{if(e.target.id==='drawer')$('drawer').hidden=true});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)$('drawer').hidden=true});
   $('clear').onclick=()=>{cart={};saveCart();rerender()};

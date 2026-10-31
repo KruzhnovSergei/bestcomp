@@ -103,6 +103,9 @@
   const lbShow=()=>{lb.querySelector('img').src=imgs[cur];lb.querySelector('.lb-c').textContent=imgs.length>1?(cur+1)+' / '+imgs.length:''};
   const open=()=>{if(!imgs.length)return;lbShow();lb.hidden=false;document.body.style.overflow='hidden';lb.querySelector('.lb-x').focus()};
   const close=()=>{lb.hidden=true;document.body.style.overflow='';document.getElementById('main').focus()};
+  // «Назад» на телефоне закрывает фото на весь экран, а не уходит со страницы
+  {let hb=false;new MutationObserver(()=>{if(!lb.hidden&&!hb){hb=true;try{history.pushState({bcOv:1},'')}catch(e){}}else if(lb.hidden&&hb){hb=false;try{history.back()}catch(e){}}}).observe(lb,{attributes:true,attributeFilter:['hidden']});
+   addEventListener('popstate',()=>{if(hb){hb=false;close()}})}
   box.addEventListener('click',e=>{const b=e.target.closest('.pcd-thumbs button');if(b){show(+b.dataset.i);return}if(e.target.closest('#main'))open()});
   lb.addEventListener('click',e=>{if(e.target.closest('.lb-p')){show(cur-1);lbShow()}else if(e.target.closest('.lb-n')){show(cur+1);lbShow()}else if(e.target.closest('.lb-x')||e.target===lb)close()});
   document.addEventListener('keydown',e=>{if(lb.hidden)return;if(e.key==='Escape')close();if(e.key==='ArrowRight'&&imgs.length>1){show(cur+1);lbShow()}if(e.key==='ArrowLeft'&&imgs.length>1){show(cur-1);lbShow()}});
