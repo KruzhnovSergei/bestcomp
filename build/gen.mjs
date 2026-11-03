@@ -132,6 +132,15 @@ const subUrl = (c, sub) => `c/${subSlug(c, sub)}.html`;
 const catUrl = c => `c/${catSlug(c)}.html`;
 const pUrl = x => `p/${x.s}.html`;
 
+// бренд по названию товара: берём тот, что встречается в названии раньше всех (у видеокарт — производитель платы)
+const BRANDS = ['Intel','AMD','ASUS','MSI','Gigabyte','Palit','Inno3D','Zotac','Sapphire','PowerColor','XFX','Galax','PNY','Colorful','Maxsun','Biostar','ASRock','Kingston','Samsung','Crucial','Micron','SK hynix','Hikvision','HIKSEMI','HiWatch','Apacer','Corsair','G.Skill','Patriot','TeamGroup','Lexar','ADATA','XPG','Netac','Transcend','Western Digital','Seagate','Toshiba','Kioxia','Addlink','DeepCool','Aerocool','Cougar','Thermaltake','Chieftec','Zalman','be quiet!','Cooler Master','Jonsbo','DarkFlash','Montech','Lian Li','NZXT','Thermalright','ID-Cooling','Arctic','Noctua','PCCooler','Lenovo','HP','Acer','Dell','Apple','Huawei','Honor','Xiaomi','Infinix','Tecno','AOC','LG','Philips','Dahua','Titan Army','BenQ','ViewSonic','iiyama','Lanlipu','Canon','Epson','Pantum','Xerox','Brother','Kyocera','Ricoh','TP-Link','Mercusys','MikroTik','Ubiquiti','Tenda','Keenetic','Cudy','D-Link','Imou','EZVIZ','Uniview','Ajax','Logitech','A4Tech','Bloody','Razer','HyperX','Redragon','Genius','Defender','Microlab','SVEN','UGREEN','Meetion','Havit','Fantech','Marvo','APC','SVC','Ippon','Powercom','AndaSeat','Microsoft','Sony','JBL','Hisense'];
+const BRE = BRANDS.map(b => [b, new RegExp('(^|[^a-z0-9])' + b.toLowerCase().replace(/[.!+]/g, m => '\\' + m).replace(/ /g, '[\\s-]?') + '([^a-z0-9]|$)', 'i')]);
+const ALIAS = { 'wd ': 'Western Digital', 'tplink': 'TP-Link', 'tp link': 'TP-Link', 'хиквижн': 'Hikvision' };
+function brandOf(n) { const l = String(n).toLowerCase(); let best = null, bi = 1e9;
+  for (const [b, re] of BRE) { const m = l.match(re); if (m && m.index < bi) { bi = m.index; best = b; } }
+  if (!best) for (const k in ALIAS) if (l.includes(k)) return ALIAS[k];
+  return best; }
+
 // группы для «похожих»
 const groups = new Map();
 for (const x of items) { const k = x.c + '|' + x.sub; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); }
@@ -147,7 +156,10 @@ for (const x of items) {
   const C = [['Главная', ''], ['Каталог', 'catalog.html'], [x.cat, catUrl(x.c)], ...(x.sub ? [[x.sub, subUrl(x.c, x.sub)]] : []), [short(x.n, 60), pUrl(x)]];
   const title = `${short(x.n, 70)} — купить в Бишкеке, цена ${money(x.p)}`;
   const desc = `${short(x.n, 110)}. Цена ${money(x.p)}. ${x.st ? 'В наличии в магазине' : 'Привезём в магазин за 3–4 часа'} — Bestcomp, Бишкек, ул. Сыдыкова 178.`;
-  const prod = { '@type': 'Product', name: x.n, sku: x.s, category: x.cat + (x.sub ? ' / ' + x.sub : ''),
+  const br = brandOf(x.raw);
+  const prod = { '@type': 'Product', name: x.n, sku: 'BC-' + x.s.slice(-6).toUpperCase(), category: x.cat + (x.sub ? ' / ' + x.sub : ''),
+    description: `${x.n}. Раздел: ${x.cat}${x.sub ? ' / ' + x.sub : ''}. ${x.st ? 'В наличии в магазине' : 'Под заказ: привезём в магазин за 3–4 часа'}. Bestcomp, Бишкек, ул. Сыдыкова 178.`,
+    ...(br ? { brand: { '@type': 'Brand', name: br } } : {}),
     offers: { '@type': 'Offer', url: SITE + '/' + pUrl(x), priceCurrency: 'KGS', price: x.p, availability: 'https://schema.org/' + (x.st ? 'InStock' : 'BackOrder'),
       itemCondition: 'https://schema.org/' + (used(x.raw) ? 'UsedCondition' : 'NewCondition'), seller: STORE } };
   const body = `<main class="wrap g-main">
@@ -238,7 +250,7 @@ for (const x of pcs) {
   const title = `${x.n}${x.cfg ? ' ' + short(x.cfg, 70) : ''} — купить в Бишкеке, ${money(x.p)}`;
   const desc = `${kind(x) === 'Компьютер' ? 'Готовый компьютер' : kind(x) + ' компьютер'} в наличии: ${short(x.cfg || parts.slice(0, 4).join(', '), 140)}. Цена ${money(x.p)}. Собран и протестирован в Bestcomp, Бишкек.`;
   const C = [['Главная', ''], ['Готовые ПК', 'builds.html'], [x.n + ' ' + x.sn, url]];
-  const ld = [{ '@type': 'Product', name: `${x.n} ${x.cfg || ''}`.trim(), sku: x.sn, ...(img ? { image: img } : {}), description: x.desc || x.cfg || '',
+  const ld = [{ '@type': 'Product', name: `${x.n} ${x.cfg || ''}`.trim(), sku: x.sn, brand: { '@type': 'Brand', name: 'Bestcomp' }, ...(img ? { image: img } : {}), description: x.desc || x.cfg || '',
     offers: { '@type': 'Offer', url: SITE + '/' + url, priceCurrency: 'KGS', price: x.p, availability: 'https://schema.org/InStock', itemCondition: 'https://schema.org/NewCondition', seller: STORE } }, crumbLd(C)];
   const pre = `<h1 style="font-family:var(--f-display);font-size:clamp(26px,3.6vw,38px);margin:12px 0 6px">${esc(x.n)}</h1>${x.cfg ? `<p class="pc-cfg" style="font-size:18px">${esc(x.cfg)}</p>` : ''}<div class="pcd-price">${money(x.p)}</div>${img ? `<img src="pc/${encodeURIComponent(x.sn)}.jpg" alt="${esc(x.n)}" style="max-width:420px;width:100%;border-radius:16px;margin:12px 0">` : ''}${parts.length ? `<h2>Комплектующие</h2><ul>${parts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}`;
   let h = pcSrc
