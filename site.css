@@ -199,3 +199,5 @@ button.pcd-main{width:100%;padding:0;cursor:zoom-in;font:inherit}
 .g-catlinks a span{color:#6B717A;font-weight:500}
 .g-catlinks a:hover{border-color:var(--ink)}
 @media (max-width:600px){.g-prod{padding:20px}}
+.g-about{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 22px;display:flex;flex-direction:column;gap:10px;max-width:980px;color:var(--ink2,#3A3F47);line-height:1.55}
+.g-about p{margin:0}

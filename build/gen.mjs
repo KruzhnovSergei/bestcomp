@@ -70,7 +70,7 @@ const HEADER = tplSrc.slice(tplSrc.indexOf('<header class="top">'), tplSrc.index
 const FOOTER = tplSrc.slice(tplSrc.indexOf('<footer class="foot">'), tplSrc.indexOf('</footer>') + 9);
 const CSSV = (tplSrc.match(/site\.css\?v=(\d+)/) || [])[1] || '1';
 const SCRIPTS = (tplSrc.match(/<script src="(?:https:\/\/www\.gstatic|config\.js|stats\.js|notice\.js)[^"]*"><\/script>/g) || []).join('\n');
-function page({ url, title, desc, body, ld = [], og = SITE + '/logo-600.jpg?v=3', robots = '' }) {
+function page({ url, title, desc, body, ld = [], og = SITE + '/logo-600.jpg?v=3', robots = '', canon = url }) {
   return `<!doctype html>
 <html lang="ru">
 <head>
@@ -79,7 +79,7 @@ function page({ url, title, desc, body, ld = [], og = SITE + '/logo-600.jpg?v=3'
 <base href="/">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
-${robots ? `<meta name="robots" content="${robots}">\n` : ''}<link rel="canonical" href="${SITE}/${url}">
+${robots ? `<meta name="robots" content="${robots}">\n` : ''}<link rel="canonical" href="${SITE}/${canon}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="${SITE}/${url}">
@@ -141,6 +141,77 @@ function brandOf(n) { const l = String(n).toLowerCase(); let best = null, bi = 1
   if (!best) for (const k in ALIAS) if (l.includes(k)) return ALIAS[k];
   return best; }
 
+// ---------- один и тот же товар от разных поставщиков ----------
+// Одна категория, один бренд, общий редкий код модели (i5-14400f, ds-2cd1023g2-liu…), тот же объём памяти и цвет,
+// цены отличаются не больше чем на 25%. Главной страницей группы считается товар в наличии, иначе самый дешёвый;
+// остальные указывают на неё через canonical и не попадают в карту сайта — Google не видит дублей.
+const SPEC = /^\d+([.,]\d+)?(gb|tb|mb|kb|mhz|ghz|w|watt|bit|mm|hz|cm|v|a|ah|va|p|k|g|t|m|x|ms|rpm|cfm|db|dba|mah|wh|in|gbps|mbps|nm|th|fps|lm|lux|kg|pcs|pin|ppm|dpi|mp|ma)$|^(ddr|gddr|lpddr|pcie|usb|gen|sata|sataiii|hdmi|dp|wifi|wi|bt|rj|ip|lga|am|tdp|cl|cat|pc|pc4|pc5|ce|tcl|qlc|tlc|ax|ac)\d+[a-z]*$|^\d+(x\d+)+[a-z]*$|^x\d+$/;
+const UNIT = /\d(ghz|mhz|khz|hz|cm|mm|gb|tb|mb|kb|w|v|ma|mah|dpi|cpi|x|mp|ms|db|lm|bit|rpm|cfm|ppm|kva|kw|va|ah|wh|mt|gbps|mbps|nits)$/;
+const PRE = /^(rs|pcie|ddr\d?|gddr\d?|usb|atx\d*|sata|cat|hdmi|range|pc|ip|ir|lga|am\d)-?\d/;
+const COLORS = /(black|white|\bwh\b|\bbk\b|red|blue|cyan|magenta|yellow|grey|gray|silver|pink|green|purple|gold|черн|бел|красн|син|голуб|желт|сер[ыо]|серебр|розов|зелен|фиолет)/g;
+const colorOf = n => [...new Set(String(n).toLowerCase().match(COLORS) || [])].sort().join(',');
+const stoks = n => String(n).toLowerCase().split(/[\s,;()\[\]\/"«»*+|–—]+/).map(t => t.replace(/^[-.:]+|[-.:]+$/g, '')).filter(Boolean);
+const strongOf = n => stoks(n).filter(t => /^[a-z]/.test(t) && (t.match(/\d/g) || []).length >= 3 && t.length >= 6 && !/[.:]/.test(t)
+  && !SPEC.test(t.replace(/-/g, '')) && !UNIT.test(t) && !PRE.test(t));
+const memOf = n => (String(n).toLowerCase().match(/\d+\s?(gb|tb)\b/g) || []).map(v => v.replace(/\s/, '')).sort().join(',');
+const NO_DUP = new Set(['Оргтехника и расходники', 'Расходные материалы', 'Кабели и аксессуары', 'Запчасти для телевизоров', 'Прочее', 'Инструменты']);
+{
+  const DF = {}; for (const x of items) for (const t of new Set(strongOf(x.raw))) DF[t] = (DF[t] || 0) + 1;
+  const par = items.map((_, i) => i); const f = i => par[i] === i ? i : (par[i] = f(par[i]));
+  const br = items.map(x => brandOf(x.raw) || ''), mem = items.map(x => memOf(x.raw)), col = items.map(x => colorOf(x.raw));
+  const by = {};
+  items.forEach((x, i) => { if (NO_DUP.has(x.cat)) return; for (const t of new Set(strongOf(x.raw))) { if (DF[t] > 8) continue; (by[x.c + '|' + br[i] + '|' + t] ||= []).push(i); } });
+  for (const L of Object.values(by)) for (let a = 0; a < L.length; a++) for (let b = a + 1; b < L.length; b++) {
+    const i = L[a], j = L[b]; if (mem[i] !== mem[j] || col[i] !== col[j]) continue;
+    if (Math.max(items[i].p, items[j].p) / Math.min(items[i].p, items[j].p) > 1.25) continue; par[f(j)] = f(i); }
+  const cl = {}; items.forEach((x, i) => (cl[f(i)] ||= []).push(x));
+  for (const g of Object.values(cl)) { if (g.length < 2) continue;
+    g.sort((a, b) => (b.st - a.st) || a.p - b.p); for (const x of g) { x.twins = g; x.main = g[0]; } }
+}
+let dupN = 0; for (const x of items) if (x.main && x.main !== x) dupN++;
+
+// ---------- короткий понятный заголовок для поиска ----------
+const NOUN = { 'Процессоры': 'Процессор', 'Видеокарты': 'Видеокарта', 'Материнские платы': 'Материнская плата', 'Оперативная память': 'Оперативная память',
+  'Блоки питания': 'Блок питания', 'Корпуса': 'Корпус', 'Ноутбуки': 'Ноутбук', 'Мониторы': 'Монитор' };
+const JUNK = /^(процессор|cpu|сpu|vga card|видеокарта|graphics card|mb|m\/b|матплата|материнская плата|motherboard|power unit|power supply|блок питания|psu|case|корпус|монитор|monitor|led lcd|lcd|ноутбук|notebook|laptop|оперативная память|ram)(?=[\s,:-]|$)[\s,:-]*/i;
+function shortName(x) {
+  let t = x.n.replace(/(\d),(\d)/g, '$1.$2').replace(JUNK, '');
+  if (x.cat === 'Процессоры') t = t.replace(/^(lga\s?\d+|am[45]|socket\s?\S+)[\s,]+/i, '').replace(/^(amd)\s+am[45]\s+/i, '$1 ')
+    .replace(/[\s,(\/]+\d+(\.\d+)?\s*(ghz)?\s*[-–]\s*\d+(\.\d+)?\s*ghz.*$/i, '').replace(/[\s,(\/]+\d+(\.\d+)?\s*ghz.*$/i, '');
+  let cut = t.length;
+  for (const m of t.matchAll(/[,(\/\[]/g)) { if (m.index < 18) continue; if (m[0] === ',' && /\d/.test(t[m.index - 1] || '') && /\d/.test(t[m.index + 1] || '')) continue; cut = m.index; break; }
+  t = t.slice(0, cut).replace(/\s+\S$/, '').replace(/[\s,;:\-–]+$/, '').replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  if (t.length > 62) t = short(t, 62);
+  const noun = NOUN[x.cat];
+  return noun && !/^[а-яё]/i.test(t) && !t.toLowerCase().includes(noun.toLowerCase().split(' ')[0]) ? noun + ' ' + t : t;
+}
+
+// ---------- текст для главных категорий ----------
+const CAT_TEXT = {
+  'Процессоры': 'Процессоры Intel и AMD для игровых, офисных и рабочих компьютеров. Главное при сборке — совпадение сокета процессора и материнской платы: LGA1700 и LGA1851 у Intel, AM4 и AM5 у AMD. Модели с буквой F в названии (например, i5-14400F) без встроенной графики — им нужна видеокарта. Box — в коробке, обычно с кулером, Tray — без коробки и, как правило, дешевле.',
+  'Видеокарты': 'Видеокарты NVIDIA GeForce, AMD Radeon и Intel Arc для игр и работы. Для игр в Full HD обычно хватает карт уровня RTX 5060 или RX 7600, для 2K и 4K нужны модели старше. Перед покупкой проверьте, хватит ли мощности блока питания и поместится ли карта по длине в корпус.',
+  'Материнские платы': 'Материнские платы для Intel (LGA1700, LGA1851) и AMD (AM4, AM5). Плату выбирают под сокет процессора и тип памяти: DDR4 и DDR5 не взаимозаменяемы. Формат mATX подходит для большинства корпусов, ATX — для полноразмерных.',
+  'Оперативная память': 'Оперативная память DDR4 и DDR5 для компьютеров (DIMM) и ноутбуков (SODIMM). Тип памяти должен совпадать с материнской платой. Для игр сейчас оптимально 16–32 ГБ, лучше двумя модулями — так память работает в двухканальном режиме.',
+  'Накопители': 'SSD M.2 NVMe и SATA, жёсткие диски HDD и флешки. NVMe-накопители в разы быстрее SATA и ставятся в слот M.2 на материнской плате. HDD подходят для хранения больших архивов и для видеонаблюдения. Под систему лучше брать SSD от 500 ГБ.',
+  'Блоки питания': 'Блоки питания для компьютеров, адаптеры для ноутбуков и техники. Для игрового ПК берите запас мощности 20–30% к потреблению системы и сертификат 80 PLUS Bronze или выше. Нужная мощность зависит в основном от видеокарты.',
+  'Корпуса': 'Корпуса ATX, mATX и Mini-ITX. Перед покупкой проверьте, какой формат материнской платы поддерживает корпус, максимальную длину видеокарты и высоту процессорного кулера. Большинство корпусов продаются без блока питания.',
+  'Охлаждение': 'Кулеры для процессоров, системы водяного охлаждения и корпусные вентиляторы. Смотрите на поддержку сокета и TDP: кулер должен отводить не меньше тепла, чем выделяет процессор. Башенный кулер — недорогое и надёжное решение, водяное охлаждение — для мощных процессоров.',
+  'Ноутбуки': 'Ноутбуки для учёбы, работы и игр. Для офиса достаточно процессора Core i3/i5 или Ryzen 3/5 и 8–16 ГБ памяти, для игр нужна дискретная видеокарта RTX. Многие модели есть в нескольких вариантах памяти и SSD — цена указана для каждого.',
+  'Мониторы': 'Мониторы для офиса и игр. Для игр выбирайте частоту от 144 Гц, для работы с текстом и таблицами удобны 27 дюймов и разрешение 2K. Матрица IPS даёт лучшие цвета и углы обзора, VA — более глубокий чёрный.',
+  'Оргтехника и расходники': 'Принтеры, МФУ, сканеры, картриджи, тонеры и чернила. Подбирая картридж, сверяйтесь с моделью принтера — совместимые модели указаны в названии товара.',
+  'Сетевое оборудование': 'Wi-Fi роутеры, коммутаторы, точки доступа, сетевые кабели и шкафы — для квартиры, офиса и склада.',
+  'Периферия': 'Клавиатуры, мыши, наушники, колонки, веб-камеры и игровые аксессуары.',
+  'Видеонаблюдение и безопасность': 'IP-камеры, видеорегистраторы, домофоны, контроль доступа и сигнализации для дома, офиса и склада.',
+  'Стабилизаторы, ИБП, инверторы': 'Источники бесперебойного питания, стабилизаторы, инверторы и аккумуляторы. ИБП защищает компьютер при отключениях света и даёт время сохранить работу.',
+  'Запчасти для телевизоров': 'Запчасти и аксессуары для телевизоров: платы, кронштейны, разъёмы.'
+};
+function catFacts(list) {
+  const min = Math.min(...list.map(x => x.p)), max = Math.max(...list.map(x => x.p)), st = list.filter(x => x.st).length;
+  const bc = {}; for (const x of list) { const b = brandOf(x.raw); if (b) bc[b] = (bc[b] || 0) + 1; }
+  const top = Object.entries(bc).sort((a, b) => b[1] - a[1]).slice(0, 6).map(e => e[0]);
+  return `Сейчас в разделе ${NF.format(list.length)} товаров, цены от ${money(min)} до ${money(max)}${st ? `, ${st} — в наличии в магазине` : ''}.${top.length > 1 ? ' Популярные бренды: ' + top.join(', ') + '.' : ''}`;
+}
+
 // группы для «похожих»
 const groups = new Map();
 for (const x of items) { const k = x.c + '|' + x.sub; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); }
@@ -152,9 +223,9 @@ const rowHtml = x => `<a class="g-item" href="${pUrl(x)}"><span class="g-n">${es
 for (const x of items) {
   const g = groups.get(x.c + '|' + x.sub) || [];
   const i = g.indexOf(x);
-  const sim = g.filter(y => y !== x).sort((a, b) => Math.abs(a.p - x.p) - Math.abs(b.p - x.p)).slice(0, 8).sort((a, b) => a.p - b.p);
+  const sim = g.filter(y => y !== x && !(x.twins || []).includes(y)).sort((a, b) => Math.abs(a.p - x.p) - Math.abs(b.p - x.p)).slice(0, 8).sort((a, b) => a.p - b.p);
   const C = [['Главная', ''], ['Каталог', 'catalog.html'], [x.cat, catUrl(x.c)], ...(x.sub ? [[x.sub, subUrl(x.c, x.sub)]] : []), [short(x.n, 60), pUrl(x)]];
-  const title = `${short(x.n, 70)} — купить в Бишкеке, цена ${money(x.p)}`;
+  const title = `${shortName(x)} — купить в Бишкеке, цена ${money(x.p)}`;
   const desc = `${short(x.n, 110)}. Цена ${money(x.p)}. ${x.st ? 'В наличии в магазине' : 'Привезём в магазин за 3–4 часа'} — Bestcomp, Бишкек, ул. Сыдыкова 178.`;
   const br = brandOf(x.raw);
   const prod = { '@type': 'Product', name: x.n, sku: 'BC-' + x.s.slice(-6).toUpperCase(), category: x.cat + (x.sub ? ' / ' + x.sub : ''),
@@ -178,6 +249,7 @@ for (const x of items) {
       <p class="g-more">Раздел: <a href="${catUrl(x.c)}">${esc(x.cat)}</a>${x.sub ? ` · <a href="${subUrl(x.c, x.sub)}">${esc(x.sub)}</a>` : ''}</p>
     </div>
   </div>
+  ${x.twins ? `<section class="g-sec"><h2 class="spec-h">Этот же товар у других поставщиков</h2><div class="g-list">${x.twins.filter(y => y !== x).map(rowHtml).join('')}</div></section>` : ''}
   ${sim.length ? `<section class="g-sec"><h2 class="spec-h">Похожие товары</h2><div class="g-list">${sim.map(rowHtml).join('')}</div></section>` : ''}
 </main>
 <script>
@@ -186,12 +258,13 @@ for (const x of items) {
   var done=function(){b.outerHTML='<a class="btn btn-dark btn-lg" href="catalog.html">В корзине — оформить</a>'};if(id)done();
   b.onclick=function(){if(!id){id='x'+Date.now();c[id]={id:id,n:n,p:p,q:1}}try{localStorage.setItem(k,JSON.stringify(c))}catch(e){}done()}})();
 </script>`;
-  write(pUrl(x), page({ url: pUrl(x), title, desc, body, ld: [prod, crumbLd(C)] }));
-  urls.push([pUrl(x), 0.5]);
+  const canon = x.main && x.main !== x ? pUrl(x.main) : pUrl(x);
+  write(pUrl(x), page({ url: pUrl(x), canon, title, desc, body, ld: [prod, crumbLd(C)] }));
+  if (canon === pUrl(x)) urls.push([pUrl(x), 0.5]);
 }
 
 // категории и подгруппы
-const listPages = (base, title, h1, intro, list, C, chips) => {
+const listPages = (base, title, h1, intro, list, C, chips, about = '') => {
   const n = Math.max(1, Math.ceil(list.length / PER));
   for (let k = 0; k < n; k++) {
     const url = base + (k ? `-${k + 1}` : '') + '.html';
@@ -207,6 +280,7 @@ const listPages = (base, title, h1, intro, list, C, chips) => {
   <div class="note"><span>Товары с пометкой «В наличии» есть у нас на складе. Остальное привезём в магазин на Сыдыкова 178 в течение 3–4 часов после заказа. <a href="catalog.html">Поиск по всему каталогу и корзина →</a></span></div>
   <div class="g-list">${part.map(rowHtml).join('')}</div>
   ${nav}
+  ${about && !k ? `<div class="g-about">${about}</div>` : ''}
 </main>`;
     const ld = [crumbLd(C), { '@type': 'ItemList', itemListElement: part.map((x, i) => ({ '@type': 'ListItem', position: k * PER + i + 1, url: SITE + '/' + pUrl(x), name: x.n })) }];
     write(url, page({ url, title: title + (k ? ` — страница ${k + 1}` : ''), desc: `${h1}: ${NF.format(list.length)} товаров, цены от ${money(min)}. Заказ с самовывозом из магазина Bestcomp, Бишкек, ул. Сыдыкова 178.`, body, ld }));
@@ -223,11 +297,11 @@ CATS.forEach((cat, c) => {
   const subs = [...subsM].sort((a, b) => (a[0] === 'Другие') - (b[0] === 'Другие') || rk(a[0]) - rk(b[0]) || a[0].localeCompare(b[0], 'ru', { numeric: true }));
   const chips = cur => subs.length > 1 ? `<nav class="subs g-subs" aria-label="Подгруппы"><a href="${catUrl(c)}"${!cur ? ' aria-current="page"' : ''}>Все <span>${NF.format(list.length)}</span></a>${subs.map(([s, k]) => `<a href="${subUrl(c, s)}"${s === cur ? ' aria-current="page"' : ''}>${esc(s)} <span>${NF.format(k)}</span></a>`).join('')}</nav>` : '';
   const C = [['Главная', ''], ['Каталог', 'catalog.html'], [cat, catUrl(c)]];
-  listPages(`c/${catSlug(c)}`, `${cat} — купить в Бишкеке, цены | Bestcomp`, `${cat} в Бишкеке`, `${NF.format(list.length)} товаров с ценами · обновлено ${ruDate(AT)}`, list, C, chips(''));
+  listPages(`c/${catSlug(c)}`, `${cat} — купить в Бишкеке, цены | Bestcomp`, `${cat} в Бишкеке`, `${NF.format(list.length)} товаров с ценами · обновлено ${ruDate(AT)}`, list, C, chips(''), `${CAT_TEXT[cat] ? `<p>${esc(CAT_TEXT[cat])}</p>` : ''}<p>${esc(catFacts(list))} Не знаете, что выбрать, — <a href="https://wa.me/${WA}" target="_blank" rel="noopener">напишите в WhatsApp</a>, подберём под задачу и бюджет.</p>`);
   if (subs.length > 1) for (const [s] of subs) {
     const sl = list.filter(x => x.sub === s);
     const nm = s === 'Другие' ? `${cat}: другие` : `${cat}: ${s}`;
-    listPages(`c/${subSlug(c, s)}`, `${nm} — купить в Бишкеке, цены | Bestcomp`, nm, `${NF.format(sl.length)} товаров с ценами · обновлено ${ruDate(AT)}`, sl, [...C, [s, subUrl(c, s)]], chips(s));
+    listPages(`c/${subSlug(c, s)}`, `${nm} — купить в Бишкеке, цены | Bestcomp`, nm, `${NF.format(sl.length)} товаров с ценами · обновлено ${ruDate(AT)}`, sl, [...C, [s, subUrl(c, s)]], chips(s), `<p>${esc(catFacts(sl))}</p>`);
   }
 });
 
@@ -284,4 +358,4 @@ write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>
 ${urls.map(([u, pr]) => `  <url><loc>${SITE}/${u}</loc><lastmod>${day}</lastmod><priority>${pr.toFixed(1)}</priority></url>`).join('\n')}
 </urlset>
 `);
-console.log(`Готово: ${items.length} товаров, ${catLinks.length} категорий, ${pcs.length} ПК, ${urls.length} адресов в sitemap.xml`);
+console.log(`Готово: ${items.length} товаров (${dupN} дублей объединены), ${catLinks.length} категорий, ${pcs.length} ПК, ${urls.length} адресов в sitemap.xml`);
