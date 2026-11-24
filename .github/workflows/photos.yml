@@ -29,6 +29,7 @@ jobs:
           PHOTO_LIMIT: ${{ vars.PHOTO_LIMIT || '30' }}
         run: node build/photos.mjs
       - name: Сохранить фото
+        if: always()
         run: |
           git config user.name "Bestcomp photo bot"
           git config user.email "noreply@bestcomp.kg"

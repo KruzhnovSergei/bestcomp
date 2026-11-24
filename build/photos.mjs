@@ -11,7 +11,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? proces
 const LIMIT = +arg('--limit', process.env.PHOTO_LIMIT || 30);         // товаров за один запуск
 const DRY = process.argv.includes('--dry');                            // только показать, что будет искать
 const BRAVE = process.env.BRAVE_API_KEY, GEMINI = process.env.GEMINI_API_KEY;
-const MODELS = (process.env.GEMINI_MODEL || 'gemini-flash-lite-latest,gemini-flash-latest,gemini-4-hydrogen').split(',');
+const MODELS = (process.env.GEMINI_MODEL || 'gemini-flash-lite-latest,gemini-flash-latest').split(',');
 const RETRY_DAYS = 30;                                                 // не нашли — повторим через месяц
 // первый этап: эти категории + всё, что в наличии
 const FIRST = new Set((process.env.PHOTO_CATS || 'Видеокарты,Процессоры,Материнские платы,Мониторы,Ноутбуки').split(','));
@@ -38,8 +38,21 @@ markTwins(items);
 const now = Date.now();
 const has = x => idx.items[photoKey(x.raw)] || (x.twins || []).some(y => idx.items[photoKey(y.raw)]);
 const triedRecently = x => { const t = idx.tried[photoKey(x.raw)]; return t && now - Date.parse(t.at) < RETRY_DAYS * 864e5; };
+// «фото-группа»: та же категория, бренд и редкий код модели, без учёта памяти, SSD и цены —
+// например, один ноутбук в разных конфигурациях. Ищем один раз, фото получает вся группа.
+const DF = {}; for (const x of items) for (const t of new Set(strongOf(x.raw))) DF[t] = (DF[t] || 0) + 1;
+const groupOf = new Map(); {
+  const by = new Map();
+  for (const x of items) { const codes = strongOf(x.raw).filter(t => DF[t] <= 40); const k = codes.length ? x.c + '|' + (brandOf(x.raw) || '') + '|' + codes[0] : 'x|' + x.raw;
+    if (!by.has(k)) by.set(k, []); by.get(k).push(x); }
+  for (const g of by.values()) for (const x of g) groupOf.set(x, g);
+}
+const ORDER = ['Процессоры', 'Видеокарты', 'Материнские платы', 'Мониторы', 'Ноутбуки'];
+const rankCat = x => { const i = ORDER.indexOf(x.cat); return i < 0 ? 99 : i; };
+const seenG = new Set();
 const queue = items.filter(x => (!x.main || x.main === x) && !used(x.raw) && (x.st || FIRST.has(x.cat)) && !has(x) && !triedRecently(x))
-  .sort((a, b) => (b.st - a.st) || (FIRST.has(b.cat) - FIRST.has(a.cat)) || b.p - a.p)
+  .sort((a, b) => (b.st - a.st) || rankCat(a) - rankCat(b) || b.p - a.p)
+  .filter(x => { const g = groupOf.get(x); if (seenG.has(g)) return false; seenG.add(g); return !g.some(y => idx.items[photoKey(y.raw)]); })
   .slice(0, LIMIT);
 
 // запрос: бренд + серия/модель + коды, без русских слов, характеристик и сокета
@@ -98,26 +111,34 @@ async function download(u) {
     return b;
   } catch (e) { return null; } finally { clearTimeout(t); }
 }
+let geminiCalls = 0, stopAll = '';
 async function ask(x, jpeg) {
   const prompt = `Ты проверяешь фото для карточки товара в интернет-магазине компьютерной техники.
 Товар: «${x.n}» (категория: ${x.cat}).
-Ответь JSON: {"match": "yes"|"no"|"unsure", "confidence": 0..1, "clean": true|false, "reason": "кратко по-русски"}.
+Ответь JSON: {"match": "yes"|"no"|"unsure", "confidence": 0..1, "kind": "plain"|"scene"|"banner"|"other", "reason": "кратко по-русски"}.
 match=yes — только если на фото именно этот товар: тот же тип, бренд и модель (серия/вариант исполнения, цвет), а не похожая модель.
-clean=false — если это коллаж, баннер, фото с людьми, скриншот сайта, водяной знак или логотип другого магазина, крупный посторонний текст.`;
+kind: plain — товар на однотонном/белом фоне (можно с коробкой); scene — один товар на красивом фоне без текста; banner — реклама, коллаж, несколько ракурсов, крупный текст, люди, скриншот сайта; other — всё остальное.
+Если есть водяной знак или логотип магазина — kind=banner.`;
   for (const model of MODELS) {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
+      geminiCalls++;
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: jpeg.toString('base64') } }] }],
           generationConfig: { temperature: 0, responseMimeType: 'application/json' } }) });
-      if (r.status === 404) break;                                   // нет такой модели — пробуем следующую
-      if (r.status === 429 || r.status >= 500) { await sleep(15000 * (i + 1)); continue; }
-      if (!r.ok) throw new Error('Gemini ' + r.status + ' ' + (await r.text()).slice(0, 200));
+      if (r.status === 404) { console.log(`Модель ${model} недоступна, пробую следующую`); break; }
+      if (r.status === 429) {
+        const t = await r.text();
+        if (/per.?day|daily|PerDay/i.test(t)) { stopAll = 'дневной лимит бесплатного Gemini исчерпан'; console.log('Gemini 429:', t.slice(0, 300)); return null; }
+        console.log(`Gemini 429 (${model}), жду минуту`); await sleep(61000); continue;
+      }
+      if (r.status >= 500) { await sleep(10000); continue; }
+      if (!r.ok) { const t = (await r.text()).slice(0, 300); stopAll = `Gemini ${r.status}: ${t}`; return null; }
       const j = await r.json(); const t = j.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '{}';
       try { return JSON.parse(t.replace(/^```json|```$/g, '')); } catch (e) { return { match: 'unsure', confidence: 0, reason: 'не разобрал ответ' }; }
     }
   }
-  throw new Error('Gemini: нет доступной модели');
+  stopAll = 'Gemini не отвечает'; return null;
 }
 // белый квадрат 800×800, товар по центру
 const normalize = b => sharp(b).rotate().flatten({ background: '#ffffff' }).trim({ threshold: 12 })
@@ -127,31 +148,47 @@ const normalize = b => sharp(b).rotate().flatten({ background: '#ffffff' }).trim
 
 // ---------- основной цикл ----------
 let ok = 0, miss = 0;
+const t0 = Date.now();
 for (const x of queue) {
+  if (stopAll) break;
+  if (Date.now() - t0 > 70 * 60e3) { console.log('Время вышло, остальное — в следующий раз'); break; }
   const key = photoKey(x.raw), q = queryOf(x);
-  let found = null, why = 'не нашли подходящего фото';
+  let found = null, fallback = null, why = 'не нашли подходящего фото';
   try {
-    const cands = rank(await search(q), brandOf(x.raw)).slice(0, 4);
+    const codes = strongOf(x.raw);
+    let cands = rank(await search(q), brandOf(x.raw));
+    // сначала те, где в названии картинки есть код модели
+    if (codes.length) cands = [...cands.filter(c => codes.some(k => (c.title + ' ' + c.page + ' ' + c.img).toLowerCase().includes(k))), ...cands.filter(c => !codes.some(k => (c.title + ' ' + c.page + ' ' + c.img).toLowerCase().includes(k)))];
     await sleep(1100);
+    let checked = 0;
     for (const c of cands) {
+      if (checked >= 3 || stopAll) break;
       const b = await download(c.img); if (!b) continue;
+      checked++;
       const small = await sharp(b).rotate().flatten({ background: '#ffffff' }).resize(768, 768, { fit: 'inside' }).jpeg({ quality: 80 }).toBuffer();
-      const v = await ask(x, small); await sleep(4500);
-      if (v.match === 'yes' && v.clean !== false && (+v.confidence || 0) >= 0.85) { found = { b, c, v }; break; }
-      why = `ИИ: ${v.match} (${v.reason || ''})`;
+      const v = await ask(x, small); if (!v) break; await sleep(4500);
+      const good = v.match === 'yes' && (+v.confidence || 0) >= 0.85;
+      if (good && v.kind === 'plain') { found = { b, c, v }; break; }
+      if (good && v.kind === 'scene' && !fallback) fallback = { b, c, v };
+      why = `ИИ: ${v.match}/${v.kind} (${v.reason || ''})`;
     }
-  } catch (e) { console.log('Ошибка:', e.message); why = 'ошибка: ' + e.message.slice(0, 80); if (/Brave 4(01|02|03)|Gemini 4(00|01|03)/.test(e.message)) break; }
+  } catch (e) { console.log('Ошибка:', e.message); why = 'ошибка: ' + e.message.slice(0, 80); if (/Brave 4(01|02|03)/.test(e.message)) { stopAll = e.message; } }
+  found ||= fallback;
+  if (stopAll && !found) break;                  // не записываем «не нашли», если просто кончился лимит
+  const group = groupOf.get(x) || [x];
   if (found) {
     const f = `img/${key.slice(0, 2)}/${key}.jpg`;
     fs.mkdirSync(path.join(ROOT, path.dirname(f)), { recursive: true });
     fs.writeFileSync(path.join(ROOT, f), await normalize(found.b));
-    idx.items[key] = { f, src: found.c.img, page: found.c.page, at: new Date().toISOString(), n: x.n.slice(0, 120) };
-    delete idx.tried[key]; ok++;
-    console.log(`✓ ${x.n.slice(0, 70)}  ←  ${found.c.host}`);
+    for (const y of group) { const k = photoKey(y.raw); idx.items[k] = { f, src: found.c.img, page: found.c.page, at: new Date().toISOString(), n: y.n.slice(0, 120) }; delete idx.tried[k]; }
+    ok++;
+    console.log(`✓ ${x.n.slice(0, 70)}  ←  ${found.c.host}${group.length > 1 ? `  (+${group.length - 1} похожих)` : ''}`);
   } else {
-    idx.tried[key] = { at: new Date().toISOString(), why: why.slice(0, 160) }; miss++;
-    console.log(`✗ ${x.n.slice(0, 70)}  —  ${why.slice(0, 100)}`);
+    for (const y of group) idx.tried[photoKey(y.raw)] = { at: new Date().toISOString(), why: why.slice(0, 160) };
+    miss++;
+    console.log(`✗ ${x.n.slice(0, 70)}  —  ${why.slice(0, 120)}`);
   }
   save();
 }
-console.log(`Готово: найдено ${ok}, не найдено ${miss}. Всего фото: ${Object.keys(idx.items).length}`);
+if (stopAll) console.log('Остановлено: ' + stopAll);
+console.log(`Готово: найдено ${ok}, не найдено ${miss}, проверок ИИ ${geminiCalls}. Всего фото: ${Object.keys(idx.items).length}`);
