@@ -18,6 +18,8 @@ const FIRST = new Set((process.env.PHOTO_CATS || 'Видеокарты,Проц�
 
 // чужие магазины и площадки — их фото не берём
 const BLOCK = /(^|\.)(enter\.kg|kivano\.kg|ultra\.kg|intermedia\.kg|lalafo\.kg|max\.kg|2gis\.|instagram\.|facebook\.|pinterest\.|vk\.com|ok\.ru|youtube\.|tiktok\.|avito\.|olx\.|ebay\.|aliexpress\.|alibaba\.|1688\.com|taobao\.|wildberries\.|ozon\.|reddit\.|imgur\.|wikipedia\.|shutterstock\.|alamy\.|istockphoto\.|depositphotos\.|dreamstime\.|freepik\.)/i;
+// обзоры и новости — это фото редакций, их не берём
+const EDITORIAL = /(^|\.)(pcgamer|theverge|techradar|pcmag|club386|thinkcomputers|lesnumeriques|tomshardware|anandtech|guru3d|techpowerup|wccftech|notebookcheck|kitguru|hothardware|techspot|digitaltrends|cnet|engadget|gizmodo|ign|wired|arstechnica|3dnews|ixbt|overclockers|tweaktown|techgage|eteknix|bit-tech|hardwarecanucks|pcworld|zdnet|tomsguide|windowscentral|neowin|videocardz|igorslab|computerbase|hardwareluxx|pcgameshardware|chip|golem|heise|gamestar)\./i;
 // сайты производителей — их фото в приоритете
 const MAKER = { Intel: 'intel', AMD: 'amd', ASUS: 'asus', MSI: 'msi', Gigabyte: 'gigabyte', Palit: 'palit', Inno3D: 'inno3d', Zotac: 'zotac',
   Sapphire: 'sapphiretech', PowerColor: 'powercolor', XFX: 'xfxforce', Galax: 'galax', PNY: 'pny', Colorful: 'colorful', Maxsun: 'maxsun',
@@ -27,8 +29,14 @@ const MAKER = { Intel: 'intel', AMD: 'amd', ASUS: 'asus', MSI: 'msi', Gigabyte: 
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const IDX_F = path.join(ROOT, 'img', 'index.json');
+const hostOf0 = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
+const EDITORIAL_OLD = /(^|\.)(pcgamer|theverge|techradar|pcmag|club386|thinkcomputers|lesnumeriques|tomshardware|anandtech|guru3d|techpowerup|wccftech|notebookcheck|kitguru|hothardware|techspot)\./i;
 const idx = fs.existsSync(IDX_F) ? JSON.parse(fs.readFileSync(IDX_F, 'utf8')) : { items: {}, tried: {} };
+for (const [k, v] of Object.entries(idx.items)) {          // фото с сайтов обзоров убираем — найдём заново у магазинов/производителей
+  if (EDITORIAL_OLD.test(hostOf0(v.page)) || EDITORIAL_OLD.test(hostOf0(v.src))) { delete idx.items[k];
+    if (!Object.values(idx.items).some(o => o.f === v.f)) try { fs.unlinkSync(path.join(ROOT, v.f)); } catch (e) {} } }
 const save = () => { fs.mkdirSync(path.dirname(IDX_F), { recursive: true }); fs.writeFileSync(IDX_F, JSON.stringify(idx, null, 0)); };
+save();
 
 // ---------- что искать ----------
 const data = await loadData();
@@ -42,10 +50,12 @@ const triedRecently = x => { const t = idx.tried[photoKey(x.raw)]; return t && n
 // например, один ноутбук в разных конфигурациях. Ищем один раз, фото получает вся группа.
 const DF = {}; for (const x of items) for (const t of new Set(strongOf(x.raw))) DF[t] = (DF[t] || 0) + 1;
 const groupOf = new Map(); {
+  const par = items.map((_, i) => i); const f = i => par[i] === i ? i : (par[i] = f(par[i]));
   const by = new Map();
-  for (const x of items) { const codes = strongOf(x.raw).filter(t => DF[t] <= 40); const k = codes.length ? x.c + '|' + (brandOf(x.raw) || '') + '|' + codes[0] : 'x|' + x.raw;
-    if (!by.has(k)) by.set(k, []); by.get(k).push(x); }
-  for (const g of by.values()) for (const x of g) groupOf.set(x, g);
+  items.forEach((x, i) => { for (const t of new Set(strongOf(x.raw))) { if (DF[t] > 40) continue; const k = x.c + '|' + (brandOf(x.raw) || '') + '|' + t;
+    if (by.has(k)) par[f(i)] = f(by.get(k)); else by.set(k, i); } });
+  const g = new Map(); items.forEach((x, i) => { const r = f(i); if (!g.has(r)) g.set(r, []); g.get(r).push(x); });
+  for (const L of g.values()) for (const x of L) groupOf.set(x, L);
 }
 const ORDER = ['Процессоры', 'Видеокарты', 'Материнские платы', 'Мониторы', 'Ноутбуки'];
 const rankCat = x => { const i = ORDER.indexOf(x.cat); return i < 0 ? 99 : i; };
@@ -95,7 +105,7 @@ async function search(q) {
 const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
 function rank(list, brand) {
   const mk = MAKER[brand];
-  return list.filter(c => !BLOCK.test(c.host) && !BLOCK.test(hostOf(c.img)) && (!c.w || (c.w >= 400 && c.h >= 300)))
+  return list.filter(c => !BLOCK.test(c.host) && !BLOCK.test(hostOf(c.img)) && !EDITORIAL.test(c.host) && !EDITORIAL.test(hostOf(c.img)) && (!c.w || (c.w >= 400 && c.h >= 300)))
     .map(c => ({ ...c, score: (mk && (c.host.includes(mk) || hostOf(c.img).includes(mk)) ? 10 : 0) + (c.w >= 800 ? 2 : 0) }))
     .sort((a, b) => b.score - a.score);
 }
@@ -118,7 +128,7 @@ async function ask(x, jpeg) {
 Ответь JSON: {"match": "yes"|"no"|"unsure", "confidence": 0..1, "kind": "plain"|"scene"|"banner"|"other", "reason": "кратко по-русски"}.
 match=yes — только если на фото именно этот товар: тот же тип, бренд и модель (серия/вариант исполнения, цвет), а не похожая модель.
 kind: plain — товар на однотонном/белом фоне (можно с коробкой); scene — один товар на красивом фоне без текста; banner — реклама, коллаж, несколько ракурсов, крупный текст, люди, скриншот сайта; other — всё остальное.
-Если есть водяной знак или логотип магазина — kind=banner.`;
+Если есть водяной знак или логотип магазина — kind=banner.\nКоробка или её отсутствие (Box/Tray/OEM) — НЕ причина для match=no, если сам товар тот же. Но индексы модели (K, KF, F, X3D, Ti, Super и т.п.) должны совпадать.`;
   for (const model of MODELS) {
     for (let i = 0; i < 4; i++) {
       geminiCalls++;
