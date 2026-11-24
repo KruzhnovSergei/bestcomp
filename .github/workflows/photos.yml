@@ -1,0 +1,38 @@
+name: Фото товаров
+# Раз в день ищет фото для товаров без фото (build/photos.mjs) и сохраняет их в img/.
+# Нужны секреты репозитория: BRAVE_API_KEY (Brave Search API) и GEMINI_API_KEY (Google AI Studio).
+# Сколько товаров за раз — переменная PHOTO_LIMIT в Settings → Secrets and variables → Actions → Variables (по умолчанию 30).
+on:
+  schedule:
+    - cron: '17 21 * * *'   # 03:17 по Бишкеку
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: photos
+  cancel-in-progress: false
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Установить sharp
+        run: npm install --no-save --no-package-lock sharp@0.34
+      - name: Искать фото
+        env:
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PHOTO_LIMIT: ${{ vars.PHOTO_LIMIT || '30' }}
+        run: node build/photos.mjs
+      - name: Сохранить фото
+        run: |
+          git config user.name "Bestcomp photo bot"
+          git config user.email "noreply@bestcomp.kg"
+          git add img
+          if git diff --cached --quiet; then echo "Новых фото нет"; exit 0; fi
+          git commit -m "Фото товаров: $(date -u +%Y-%m-%d)"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done

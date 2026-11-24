@@ -201,3 +201,11 @@ button.pcd-main{width:100%;padding:0;cursor:zoom-in;font:inherit}
 @media (max-width:600px){.g-prod{padding:20px}}
 .g-about{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 22px;display:flex;flex-direction:column;gap:10px;max-width:980px;color:var(--ink2,#3A3F47);line-height:1.55}
 .g-about p{margin:0}
+/* фото товаров */
+.g-prod.has-img{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:28px;align-items:start}
+.g-img{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;aspect-ratio:1}
+.g-img img{display:block;width:100%;height:100%;object-fit:contain}
+.g-th{flex:none;width:56px;height:56px;border-radius:10px;background:#fff;border:1px solid var(--line);object-fit:contain}
+@media (max-width:720px){.g-prod.has-img{grid-template-columns:1fr}.g-img{max-width:420px}}
+.g-item.has-th{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:6px 14px}
+@media (max-width:600px){.g-item.has-th{grid-template-columns:56px minmax(0,1fr)}.g-item.has-th .g-th{grid-row:span 2;align-self:start}.g-item.has-th .g-p{grid-column:2}}
