@@ -11,7 +11,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? proces
 const LIMIT = +arg('--limit', process.env.PHOTO_LIMIT || 30);         // товаров за один запуск
 const DRY = process.argv.includes('--dry');                            // только показать, что будет искать
 const BRAVE = process.env.BRAVE_API_KEY, GEMINI = process.env.GEMINI_API_KEY;
-const MODELS = (process.env.GEMINI_MODEL || 'gemini-flash-lite-latest,gemini-flash-latest').split(',');
+const MODELS = (process.env.GEMINI_MODEL || 'gemini-flash-lite-latest,gemini-flash-latest,gemini-4-hydrogen').split(',');
 const RETRY_DAYS = 30;                                                 // не нашли — повторим через месяц
 // первый этап: эти категории + всё, что в наличии
 const FIRST = new Set((process.env.PHOTO_CATS || 'Видеокарты,Процессоры,Материнские платы,Мониторы,Ноутбуки').split(','));
