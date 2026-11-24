@@ -40,6 +40,10 @@
 .item .nm small{color:#6B717A;font-size:13px}
 .item .pr{font-family:var(--f-display);font-weight:700;font-size:18px;white-space:nowrap}
 .item .btn{min-height:44px;padding:0 16px;font-size:15px}
+.item .nm b a{color:inherit;text-decoration:none}.item .nm b a:hover{text-decoration:underline}
+.item .ph{flex:none;width:64px;height:64px;border-radius:10px;border:1px solid var(--line);background:#fff;overflow:hidden;display:block}
+.item .ph img{width:100%;height:100%;object-fit:contain;display:block}
+.item.has-ph .nm{flex-basis:180px}
 .in-cart{background:var(--paper2)!important}
 .empty{padding:48px 20px;text-align:center;color:var(--muted)}
 .more-btn{align-self:center}
@@ -258,7 +262,7 @@
     renderSubs();const L=filtered();
     $('count').textContent=L.length?`Найдено: ${NF.format(L.length)}`:'';
     if(!L.length){$('list').innerHTML=`<div class="empty">${ITEMS.length?'Ничего не нашлось. Попробуйте другой запрос или напишите нам в WhatsApp — подберём.':'Каталог пока пуст.'}</div>`;$('more').hidden=true;return}
-    $('list').innerHTML=L.slice(0,shown).map(x=>{const inC=cart[x.id];return `<div class="item"><div class="nm"><b>${esc(x.n)}</b><small>${esc(CATS[x.c]||'')}</small>${x.st?'<span class="instock">В наличии</span>':''}</div><span class="pr">${money(x.p)}</span><button class="btn ${inC?'btn-line in-cart':'btn-dark'}" data-add="${x.id}">${inC?'В корзине · '+inC.q:'В корзину'}</button></div>`}).join('');
+    $('list').innerHTML=L.slice(0,shown).map(x=>{const inC=cart[x.id];const ph=x.k&&PHOTO[x.k];return `<div class="item${ph?' has-ph':''}">${ph?`<a class="ph" href="${x.href||'#'}"><img src="${ph}" alt="" loading="lazy" width="64" height="64"></a>`:''}<div class="nm"><b>${x.href?`<a href="${x.href}">${esc(x.n)}</a>`:esc(x.n)}</b><small>${esc(CATS[x.c]||'')}</small>${x.st?'<span class="instock">В наличии</span>':''}</div><span class="pr">${money(x.p)}</span><button class="btn ${inC?'btn-line in-cart':'btn-dark'}" data-add="${x.id}">${inC?'В корзине · '+inC.q:'В корзину'}</button></div>`}).join('');
     $('more').hidden=L.length<=shown;
     if(L.length>shown)$('more').textContent=`Показать ещё (осталось ${NF.format(L.length-shown)})`;
   }
@@ -298,6 +302,21 @@
     window.open('https://wa.me/'+WA+'?text='+encodeURIComponent(txt),'_blank','noopener');
   };
 
+  // ссылки на страницы товаров и фото: адрес страницы считается так же, как в сборке сайта (build/gen.mjs)
+  let PHOTO={};
+  const TR={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+  const cleanN=s=>String(s||'').replace(/_x000[0-9a-f]_/gi,' ').replace(/^[\s.\-–—]+/,'').replace(/\s+/g,' ').trim();
+  const slugN=(s,n=60)=>{let t=String(s).toLowerCase().split('').map(c=>TR[c]??c).join('').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');if(t.length>n)t=t.slice(0,n).replace(/-[^-]*$/,'');return t||'item'};
+  async function keyOf(raw){const b=new Uint8Array(await crypto.subtle.digest('SHA-1',new TextEncoder().encode(String(raw))));let s='';for(const c of b)s+=String.fromCharCode(c);return btoa(s).replace(/[^a-z0-9]/gi,'').toLowerCase().slice(0,6).padEnd(6,'0')}
+  async function linkItems(){
+    try{
+      fetch('img/catalog.json').then(r=>r.ok?r.json():{}).then(j=>{PHOTO=j||{};if(Object.keys(PHOTO).length)rerender()}).catch(()=>{});
+      if(!(window.crypto&&crypto.subtle))return;
+      for(const x of ITEMS){x.k=await keyOf(x.n);if(x.p>0)x.href='p/'+slugN(cleanN(x.n))+'-'+x.k+'.html'}
+      rerender();
+    }catch(e){}
+  }
+
   // загрузка каталога из базы
   async function load(){
     try{
@@ -313,6 +332,7 @@
       const byName=new Map(ITEMS.map(x=>[x.n,x]));const nc={};
       for(const x of Object.values(cart)){const f=byName.get(x.n);if(f)nc[f.id]={id:f.id,n:f.n,p:f.p,q:x.q}}cart=nc;saveCart();
       CNT=CATS.map((_,i)=>ITEMS.filter(x=>x.c===i).length);
+      linkItems();
       $('stockTg').hidden=!ITEMS.some(x=>x.st);
       const uq=new URLSearchParams(location.search).get('q');if(uq){q=uq.trim();$('q').value=q}
       const hc=hashCat();cat=hc?CATS.indexOf(hc):-1;sub=cat>=0?hashSub():'';

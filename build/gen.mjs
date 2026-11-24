@@ -106,6 +106,8 @@ const PHOTOS = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 
 for (const x of items) { const own = PHOTOS[photoKey(x.raw)]; if (own) x.img = own.f; }
 for (const x of items) if (!x.img && x.twins) { const t = x.twins.find(y => y.img); if (t) x.img = t.img; }
 const imgN = items.filter(x => x.img).length;
+// для живого каталога (catalog.html): ключ товара → фото
+write('img/catalog.json', JSON.stringify(Object.fromEntries(items.filter(x => x.img).map(x => [photoKey(x.raw), x.img]))));
 // Одна категория, один бренд, общий редкий код модели (i5-14400f, ds-2cd1023g2-liu…), тот же объём памяти и цвет,
 // цены отличаются не больше чем на 25%. Главной страницей группы считается товар в наличии, иначе самый дешёвый;
 // остальные указывают на неё через canonical и не попадают в карту сайта — Google не видит дублей.
