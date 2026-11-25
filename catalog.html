@@ -310,7 +310,7 @@
   async function keyOf(raw){const b=new Uint8Array(await crypto.subtle.digest('SHA-1',new TextEncoder().encode(String(raw))));let s='';for(const c of b)s+=String.fromCharCode(c);return btoa(s).replace(/[^a-z0-9]/gi,'').toLowerCase().slice(0,6).padEnd(6,'0')}
   async function linkItems(){
     try{
-      fetch('img/catalog.json').then(r=>r.ok?r.json():{}).then(j=>{PHOTO=j||{};if(Object.keys(PHOTO).length)rerender()}).catch(()=>{});
+      fetch('img/catalog.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(j=>{PHOTO=j||{};if(Object.keys(PHOTO).length)rerender()}).catch(()=>{});
       if(!(window.crypto&&crypto.subtle))return;
       for(const x of ITEMS){x.k=await keyOf(x.n);if(x.p>0)x.href='p/'+slugN(cleanN(x.n))+'-'+x.k+'.html'}
       rerender();
