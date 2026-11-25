@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
-  actions: read
+  actions: write   # запустить сборку сайта после новых фото
 concurrency:
   group: photos
   cancel-in-progress: false
@@ -55,3 +55,9 @@ jobs:
           if git diff --cached --quiet; then echo "Новых фото нет"; exit 0; fi
           git commit -m "Фото товаров: $(date -u +%Y-%m-%d)"
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+      # пуш от имени бота сам сборку сайта не запускает (так устроен GitHub) — запускаем её явно
+      - name: Обновить сайт
+        if: always() && steps.gate.outputs.go == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/actions/workflows/site.yml/dispatches" -f ref=main
