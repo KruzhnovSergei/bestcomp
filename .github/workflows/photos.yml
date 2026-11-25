@@ -4,10 +4,15 @@ name: Фото товаров
 # Сколько товаров за раз — переменная PHOTO_LIMIT в Settings → Secrets and variables → Actions → Variables (по умолчанию 30).
 on:
   schedule:
+    # GitHub иногда пропускает запуски по расписанию, поэтому три попытки за ночь;
+    # если ночной запуск уже прошёл, следующие сразу завершаются (шаг «Уже искали этой ночью?»)
     - cron: '17 21 * * *'   # 03:17 по Бишкеку
+    - cron: '47 22 * * *'   # 04:47
+    - cron: '17 0 * * *'    # 06:17
   workflow_dispatch:
 permissions:
   contents: write
+  actions: read
 concurrency:
   group: photos
   cancel-in-progress: false
@@ -16,20 +21,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
+      - name: Уже искали этой ночью?
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "go=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          since=$(date -u -d '-10 hours' +%Y-%m-%dT%H:%M:%SZ)
+          n=$(gh api "repos/${{ github.repository }}/actions/workflows/photos.yml/runs?event=schedule&status=success&created=>=$since" --jq '.total_count')
+          if [ "${n:-0}" -gt 0 ]; then echo "Этой ночью бот уже отработал — пропускаю"; echo "go=0" >> "$GITHUB_OUTPUT"; else echo "go=1" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v5
+        if: steps.gate.outputs.go == '1'
       - uses: actions/setup-node@v5
+        if: steps.gate.outputs.go == '1'
         with:
           node-version: 22
       - name: Установить sharp
+        if: steps.gate.outputs.go == '1'
         run: npm install --no-save --no-package-lock sharp@0.34
       - name: Искать фото
+        if: steps.gate.outputs.go == '1'
         env:
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PHOTO_LIMIT: ${{ vars.PHOTO_LIMIT || '30' }}
         run: node build/photos.mjs
       - name: Сохранить фото
-        if: always()
+        if: always() && steps.gate.outputs.go == '1'
         run: |
           git config user.name "Bestcomp photo bot"
           git config user.email "noreply@bestcomp.kg"
