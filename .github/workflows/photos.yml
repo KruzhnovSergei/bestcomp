@@ -1,14 +1,13 @@
 name: Фото товаров
-# Раз в день ищет фото для товаров без фото (build/photos.mjs) и сохраняет их в img/.
+# Примерно раз в сутки ищет фото для товаров без фото (build/photos.mjs) и сохраняет их в img/.
 # Нужны секреты репозитория: BRAVE_API_KEY (Brave Search API) и GEMINI_API_KEY (Google AI Studio).
 # Сколько товаров за раз — переменная PHOTO_LIMIT в Settings → Secrets and variables → Actions → Variables (по умолчанию 30).
 on:
   schedule:
-    # GitHub иногда пропускает запуски по расписанию, поэтому три попытки за ночь;
-    # если ночной запуск уже прошёл, следующие сразу завершаются (шаг «Уже искали этой ночью?»)
-    - cron: '17 21 * * *'   # 03:17 по Бишкеку
-    - cron: '47 22 * * *'   # 04:47
-    - cron: '17 0 * * *'    # 06:17
+    # GitHub выполняет расписание «по возможности»: из ежечасных запусков реально проходят 2–4 в сутки,
+    # а ежедневные часто пропускает совсем. Поэтому проверка каждый час, а поиск — только если
+    # с прошлого поиска прошло больше 20 часов (шаг «Пора искать?»). Пустая проверка занимает секунды.
+    - cron: '41 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -21,15 +20,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - name: Уже искали этой ночью?
+      - name: Пора искать?
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" != "schedule" ]; then echo "go=1" >> "$GITHUB_OUTPUT"; exit 0; fi
-          since=$(date -u -d '-10 hours' +%Y-%m-%dT%H:%M:%SZ)
-          n=$(gh api "repos/${{ github.repository }}/actions/workflows/photos.yml/runs?event=schedule&status=success&created=>=$since" --jq '.total_count')
-          if [ "${n:-0}" -gt 0 ]; then echo "Этой ночью бот уже отработал — пропускаю"; echo "go=0" >> "$GITHUB_OUTPUT"; else echo "go=1" >> "$GITHUB_OUTPUT"; fi
+          last=$(gh api "repos/${{ github.repository }}/commits?path=img/index.json&per_page=1" --jq '.[0].commit.committer.date')
+          age=$(( ( $(date -u +%s) - $(date -u -d "${last:-1970-01-01T00:00:00Z}" +%s) ) / 3600 ))
+          echo "Последний поиск: $last ($age ч назад)"
+          if [ "$age" -lt 20 ]; then echo "go=0" >> "$GITHUB_OUTPUT"; else echo "go=1" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v5
         if: steps.gate.outputs.go == '1'
       - uses: actions/setup-node@v5
