@@ -13,13 +13,18 @@ const val = v => v == null ? null : 'stringValue' in v ? v.stringValue : 'intege
   : 'arrayValue' in v ? (v.arrayValue.values || []).map(val) : 'mapValue' in v ? obj(v.mapValue.fields || {}) : null;
 const obj = f => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, val(v)]));
 async function doc(p) {
-  for (let i = 0; i < 4; i++) {
-    const r = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJ}/databases/(default)/documents/${p}?key=${KEY}`);
-    if (r.status === 404) return null;
-    if (r.ok) return obj((await r.json()).fields || {});
-    await new Promise(s => setTimeout(s, 1500 * (i + 1)));
+  let why = '';
+  for (let i = 0; i < 7; i++) {   // Firestore иногда коротко отказывает запросам из GitHub — пробуем ~2 минуты
+    try {
+      const r = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJ}/databases/(default)/documents/${p}?key=${KEY}`);
+      if (r.status === 404) return null;
+      if (r.ok) return obj((await r.json()).fields || {});
+      why = r.status + ' ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 200);
+    } catch (e) { why = String(e.cause?.code || e.message); }
+    console.warn(`Firestore ${p}: попытка ${i + 1} — ${why}`);
+    await new Promise(s => setTimeout(s, 2000 * 2 ** Math.min(i, 4)));
   }
-  throw new Error('Не удалось прочитать ' + p);
+  throw new Error('Не удалось прочитать ' + p + ': ' + why);
 }
 export async function loadData() {
   const a = process.argv.indexOf('--data');
